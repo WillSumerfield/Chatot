@@ -1,6 +1,6 @@
 # Chatot
 
- A NLP Pokedex Entry Generator
+ A NLP Pokédex Entry Generator
 
 ## How to Use:
 
