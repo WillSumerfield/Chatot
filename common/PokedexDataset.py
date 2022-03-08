@@ -1,3 +1,5 @@
+"""This file contains a Huggingface class definition for our dataset."""
+
 import datasets
 import json
 
@@ -43,6 +45,7 @@ class PokedexDataset(datasets.GeneratorBasedBuilder):
         )
 
     def _split_generators(self, dl_manager):
+        """Return a train-test split"""
         return [
             datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={"filepath": "dataset/train_dataset.json"}),
             datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={"filepath": "dataset/test_dataset.json"}),
