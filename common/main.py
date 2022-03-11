@@ -43,6 +43,13 @@ TYPES = [
     'fairy'
 ]
 
+DESCRIPTION = """This is Chatot, a Pokedex Entry Generator. 
+The aim of this application is to generate pokedex entries for new pokemon, based on a class and type that you provide. 
+To generate novel Pokedex entries, you need to input a class and a type. 
+The class is the object that the pokemon is based on, such as 'mouse', 'keychain', or 'tree', written in  all lowercase.
+You can input multiple classes separated by spaces, although the fewer classes you add, the more your results are likely to be focused on those classes. 
+Click the 'Generate Entries' button to generate 10 new novel pokedex entries. You can highlight and copy any entries you like.""".replace('\n', ' ')
+
 # endregion Constants
 
 # region Functionality
@@ -87,13 +94,18 @@ def prompt_user():
     return pokemon_class, pokemon_type
 
 
-def generate_entries():
+def start_generating_entries():
 
-    global class_field, type_list, entry_texts
+    # Create a thread for generating entries
+    entry_generation_thread = threading.Thread(target=generate_entries, args=(class_field.get(), type_list.get()))
 
-    # Get the class and type
-    class_text = class_field.get()
-    type_text = type_list.get()
+    # Run the thread
+    entry_generation_thread.start()
+
+
+def generate_entries(class_text, type_text):
+
+    global entry_list
 
     # Format the text
     prompt = f"< type={type_text} {class_text} > *"
@@ -123,12 +135,8 @@ def generate_entries():
                     break
 
             # If no periods were used, generate a new entry and try again
-            if True: #index != -1:
-
-                # Set the corresponding entry field
-                entry_texts[i].set(entry)
-
-                # Find the next entry
+            if True:  # index != -1:
+                entry_list[i] = entry
                 break
 
 
@@ -160,11 +168,10 @@ window.geometry(f"{WINDOW_SIZE}x{WINDOW_SIZE}")
 window_closed = False
 window.protocol("WM_DELETE_WINDOW", close_window)
 
-# Set the window grid
-window.grid_rowconfigure(0, weight=1)
-window.grid_columnconfigure(0, weight=1)
-
 # endregion Window Creation
+
+# A list of the displayed generated pokedex entries
+entry_list = [""] * 10
 
 # Import the model
 model = None
@@ -183,10 +190,8 @@ tokenizer_thread.start()
 # region Run Startup
 
 # Create a frame for the startup page
-startup_frame = tk.Frame(window)
-startup_frame.grid(row=0, column=0)
-startup_frame.grid_rowconfigure(0, weight=1)
-startup_frame.grid_columnconfigure(0, weight=1)
+startup_canvas = tk.Canvas(window)
+startup_canvas.pack()
 
 # Resize the Image
 title_image = Image.open('assets/chatot.png')
@@ -195,12 +200,12 @@ title_image = title_image.resize((image_size[0], image_size[1]), Image.ANTIALIAS
 
 # Set the background image
 title_image = ImageTk.PhotoImage(title_image)
-title_image_label = tk.Label(startup_frame, image=title_image)
-title_image_label.grid(row=0, column=0)
+title_image_label = tk.Label(window, image=title_image)
+title_image_label.place(x=WINDOW_SIZE/2, y=WINDOW_SIZE * (2/5), anchor=tk.CENTER)
 
 # Draw the title
-title_text = tk.Label(startup_frame, text='CHATOT', font=FONT_TITLE)
-title_text.grid(row=1, column=0, sticky=tk.N)
+title_text = tk.Label(window, text='CHATOT', font=FONT_TITLE)
+title_text.place(x=WINDOW_SIZE/2, y=WINDOW_SIZE * (3/4), anchor=tk.CENTER)
 
 # Center the window
 center_window()
@@ -208,11 +213,8 @@ center_window()
 # Run the window
 start_time = time.time()
 while (time.time() - start_time < STARTUP_TIME) or model_thread.is_alive() or tokenizer_thread.is_alive():
-    startup_frame.update_idletasks()
-    startup_frame.update()
-
-# Clear the window
-startup_frame.destroy()
+    startup_canvas.update_idletasks()
+    startup_canvas.update()
 
 # Create the text generator
 generator = pipeline('text-generation', tokenizer=tokenizer, model=model)
@@ -222,41 +224,65 @@ generator = pipeline('text-generation', tokenizer=tokenizer, model=model)
 # region Run Main
 
 # Create a frame for the startup page
-main_frame = tk.Frame(window)
-main_frame.grid(row=0, column=0, sticky=tk.NW)
-main_frame.grid_rowconfigure(0, weight=1)
-main_frame.grid_columnconfigure(0, weight=1)
+main_canvas = tk.Canvas(window, width=WINDOW_SIZE, height=WINDOW_SIZE, highlightthickness=0)
+main_canvas.place(x=0, y=0)
+
+# Create a title
+title_label = ttk.Label(main_canvas, text='CHATOT', font=FONT_TITLE)
+title_label.place(x=WINDOW_SIZE/2, y=WINDOW_SIZE/16, anchor=tk.CENTER)
+
+# Create a description
+description_label = ttk.Label(main_canvas, text=DESCRIPTION, anchor=tk.CENTER, wraplength=WINDOW_SIZE * 3/4)
+description_label.place(x=WINDOW_SIZE/2, y=WINDOW_SIZE * (7/64), anchor=tk.N)
+
+# Draw a line
+main_canvas.create_line(0, WINDOW_SIZE/4, WINDOW_SIZE, WINDOW_SIZE/4)
 
 # Create a text field for the class
-class_label = ttk.Label(main_frame, text='Class')
-class_label.grid(row=0, column=0, pady=5, padx=5, sticky=tk.NW)
-class_field = ttk.Entry(main_frame)
-class_field.grid(row=0, column=1, pady=5, padx=5, sticky=tk.NW)
+class_label = ttk.Label(main_canvas, text='Class')
+class_label.place(x=WINDOW_SIZE/4 - 4, y=WINDOW_SIZE * (5/16), anchor=tk.E)
+class_field = ttk.Entry(main_canvas)
+class_field.place(x=WINDOW_SIZE/4, y=WINDOW_SIZE * (5/16), anchor=tk.W)
 
 # Create a dropdown menu for types
-type_label = ttk.Label(main_frame, text='Type')
-type_label.grid(row=1, column=0, pady=5, padx=5, sticky=tk.NW)
-type_list = tk.StringVar(main_frame)
+type_label = ttk.Label(main_canvas, text='Type')
+type_label.place(x=WINDOW_SIZE * (15/24), y=WINDOW_SIZE * (5/16), anchor=tk.E)
+type_list = tk.StringVar(main_canvas)
 type_list.set(TYPES[0])
-type_dropdown = ttk.OptionMenu(main_frame, type_list, *TYPES)
-type_dropdown.grid(row=1, column=1, pady=5, padx=5, sticky=tk.NW)
+type_dropdown = ttk.OptionMenu(main_canvas, type_list, *TYPES)
+type_dropdown.place(x=WINDOW_SIZE * (15/24), y=WINDOW_SIZE * (5/16), anchor=tk.W)
 
 # Create a button to generate entries
-generate_button = ttk.Button(main_frame, text='Generate Entries', command=generate_entries)
-generate_button.grid(row=2, column=0, columnspan=2, pady=5, padx=5)
+generate_button = ttk.Button(main_canvas, text='Generate Entries', command=start_generating_entries)
+generate_button.place(x=WINDOW_SIZE/2, y=WINDOW_SIZE * (3/8), anchor=tk.CENTER)
 
 # Create a list of entries
 entry_fields = [None] * 10
-entry_texts = [None] * 10
 for i in range(10):
-    entry_texts[i] = tk.StringVar()
-    entry_fields[i] = ttk.Label(main_frame, textvariable=entry_texts[i], anchor=tk.E, wraplength=WINDOW_SIZE * 3/4)
-    entry_fields[i].grid(row=i, column=2, pady=5, padx=5, sticky=tk.W)
+    entry_fields[i] = tk.Text(main_canvas, width=35, height=4, bd=0, bg=window.cget('bg'), wrap=tk.WORD)
+    entry_fields[i].configure(state='disabled')
+    entry_fields[i].place(y=WINDOW_SIZE * (15/32) + (80 * (i % 5)), x=WINDOW_SIZE * (1 + (8 * (i // 5)))/16, anchor=tk.NW)
 
 # Run the window
 while not window_closed:
-    main_frame.update_idletasks()
-    main_frame.update()
+
+    # Update the window
+    main_canvas.update_idletasks()
+    main_canvas.update()
+
+    # Update each entry
+    for i in range(len(entry_list)):
+
+        # Check if the entry has already been set
+        if entry_list[i] is not None:
+
+            # Update the entry
+            entry_fields[i].configure(state='normal')
+            entry_fields[i].delete(1.0, 'end')
+            entry_fields[i].insert(1.0, entry_list[i])
+            entry_fields[i].configure(state='disabled')
+
+            entry_list[i] = None
 
 # endregion Run Main
 
