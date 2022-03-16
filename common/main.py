@@ -117,7 +117,7 @@ def generate_entries(class_text, type_text):
         while True:
 
             # Generate the entry
-            entry = generator(prompt, max_length=50, num_return_sequences=1, pad_token_id=50256)[0]['generated_text']
+            entry = generator(prompt, max_length=60, num_return_sequences=1, pad_token_id=50256)[0]['generated_text']
 
             # Remove the leading input
             entry = entry[entry.index('*') + 2:]
@@ -129,8 +129,15 @@ def generate_entries(class_text, type_text):
             periods = [per.start() for per in re.finditer(r'\.', entry)]
             periods.sort()
 
-            # If no periods were used, generate a new entry and try again
-            if len(periods) != 0:
+            # Find the first period past the 30 character place
+            index = -1
+            for period in periods:
+                if period > 40:
+                    index = period
+                    break
+
+            # If no valid periods were found, generate a new entry
+            if index != -1:
 
                 # Cut off the entry at the last period
                 index = periods[-1]
@@ -145,6 +152,7 @@ def generate_entries(class_text, type_text):
                 result = result.strip()
                 result = result[:-1]
 
+                # Store the entry in the entry list, and generate the next entry
                 entry_list[i] = result
                 break
 
