@@ -108,7 +108,7 @@ def generate_entries(class_text, type_text):
     global entry_list
 
     # Format the text
-    prompt = f"< type={type_text} {class_text} > *"
+    prompt = f"< type={type_text} {class_text} > * "
 
     # Generate the 10 entries
     for i in range(10):
@@ -117,26 +117,43 @@ def generate_entries(class_text, type_text):
         while True:
 
             # Generate the entry
-            entry = generator(prompt, max_length=30, num_return_sequences=1, pad_token_id=50256)[0]['generated_text']
+            entry = generator(prompt, max_length=60, num_return_sequences=1, pad_token_id=50256)[0]['generated_text']
 
             # Remove the leading input
             entry = entry[entry.index('*') + 2:]
 
+            # Strip whitespace
+            entry = entry.strip()
+
             # Find the index of each period in the entry
             periods = [per.start() for per in re.finditer(r'\.', entry)]
+            periods.sort()
 
-            # Find the first period after the cutoff
+            # Find the first period past the 30 character place
             index = -1
-            for per in periods:
-
-                # Use the first period past the cutoff
-                if per > 30:
-                    index = per
+            for period in periods:
+                if period > 40:
+                    index = period
                     break
 
-            # If no periods were used, generate a new entry and try again
-            if True:  # index != -1:
-                entry_list[i] = entry
+            # If no valid periods were found, generate a new entry
+            if index != -1:
+
+                # Cut off the entry at the last period
+                index = periods[-1]
+                entry = entry[:index + 1]
+
+                # Capitalize the beginning of every sentence
+                result = ''
+                sentences = entry.split('. ')
+                for s in sentences:
+                    s = s.capitalize()
+                    result = result + s + '. '
+                result = result.strip()
+                result = result[:-1]
+
+                # Store the entry in the entry list, and generate the next entry
+                entry_list[i] = result
                 break
 
 
@@ -156,7 +173,7 @@ window.title("Chatot")
 window.iconphoto(False, tk.PhotoImage(file='assets/chatot.png'))
 
 # Set the taskbar icon
-window.iconbitmap(default='assets/chatot.png')
+# window.iconbitmap(default='assets/chatot.png')
 
 # Stop the window from being resized
 window.resizable(False, False)
